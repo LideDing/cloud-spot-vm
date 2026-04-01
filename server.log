@@ -1,0 +1,88 @@
+2025/09/05 17:28:42 🚀 启动Spot VM自动管理器...
+2025/09/05 17:28:42 ✅ Spot VM自动管理器启动成功
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /api/v1/health            --> gitee.com/dinglide/spot-vm/internal/handlers.(*SimpleAuthHandler).Health-fm (5 handlers)
+[GIN-debug] POST   /api/v1/auth/validate     --> gitee.com/dinglide/spot-vm/internal/handlers.(*SimpleAuthHandler).ValidateAPIKey-fm (5 handlers)
+[GIN-debug] GET    /api/v1/protected         --> gitee.com/dinglide/spot-vm/internal/routes.SetupRoutes.func1 (6 handlers)
+[GIN-debug] GET    /api/v1/spot-vm/cheapest  --> gitee.com/dinglide/spot-vm/internal/handlers.(*SpotVMHandler).GetCheapestInstances-fm (6 handlers)
+[GIN-debug] POST   /api/v1/spot-vm/create-cheapest --> gitee.com/dinglide/spot-vm/internal/handlers.(*SpotVMHandler).CreateCheapestSpotVM-fm (6 handlers)
+[GIN-debug] GET    /api/v1/spot-vm/zones     --> gitee.com/dinglide/spot-vm/internal/handlers.(*SpotVMHandler).GetAvailableZones-fm (6 handlers)
+[GIN-debug] GET    /api/v1/spot-vm/instance-types --> gitee.com/dinglide/spot-vm/internal/handlers.(*SpotVMHandler).GetInstanceTypes-fm (6 handlers)
+[GIN-debug] DELETE /api/v1/spot-vm/instances/:id --> gitee.com/dinglide/spot-vm/internal/handlers.(*SpotVMHandler).DeleteInstance-fm (6 handlers)
+[GIN-debug] GET    /api/v1/spot-vm/current/status --> gitee.com/dinglide/spot-vm/internal/handlers.(*SpotVMHandler).GetCurrentInstanceStatus-fm (6 handlers)
+[GIN-debug] GET    /api/v1/spot-vm/current/region --> gitee.com/dinglide/spot-vm/internal/handlers.(*SpotVMHandler).GetCurrentRegion-fm (6 handlers)
+[GIN-debug] PUT    /api/v1/spot-vm/target-region --> gitee.com/dinglide/spot-vm/internal/handlers.(*SpotVMHandler).SetTargetRegion-fm (6 handlers)
+[GIN-debug] POST   /api/v1/spot-vm/trigger-termination --> gitee.com/dinglide/spot-vm/internal/handlers.(*SpotVMHandler).TriggerTermination-fm (6 handlers)
+[GIN-debug] GET    /api/v1/spot-vm/auto-manager/status --> gitee.com/dinglide/spot-vm/internal/handlers.(*SpotVMHandler).GetAutoManagerStatus-fm (6 handlers)
+[GIN-debug] POST   /api/v1/spot-vm/auto-manager/start --> gitee.com/dinglide/spot-vm/internal/handlers.(*SpotVMHandler).StartAutoManager-fm (6 handlers)
+[GIN-debug] POST   /api/v1/spot-vm/auto-manager/stop --> gitee.com/dinglide/spot-vm/internal/handlers.(*SpotVMHandler).StopAutoManager-fm (6 handlers)
+[GIN-debug] POST   /api/v1/spot-vm/auto-manager/simulate-termination --> gitee.com/dinglide/spot-vm/internal/handlers.(*SpotVMHandler).SimulateTermination-fm (6 handlers)
+[GIN-debug] GET    /api/v1/instances         --> gitee.com/dinglide/spot-vm/internal/routes.SetupRoutes.func2 (6 handlers)
+[GIN-debug] POST   /api/v1/instances         --> gitee.com/dinglide/spot-vm/internal/routes.SetupRoutes.func3 (6 handlers)
+🚀 启动Spot VM自动管理服务...
+📍 监听端口: 8080
+🔑 API Key: your-super-secret-api-key-change-in-production
+🌐 访问地址: http://localhost:8080
+🤖 自动管理器: 已启动
+📋 API端点:
+   GET  /api/v1/health - 健康检查
+   POST /api/v1/auth/validate - 验证API key
+   GET  /api/v1/spot-vm/current/status - 获取当前Spot机器状态
+   GET  /api/v1/spot-vm/current/region - 查看当前Region
+   PUT  /api/v1/spot-vm/target-region - 修改目标Region
+   POST /api/v1/spot-vm/trigger-termination - 手动触发回收
+   GET  /api/v1/spot-vm/auto-manager/status - 获取自动管理器状态
+   POST /api/v1/spot-vm/auto-manager/start - 启动自动管理器
+   POST /api/v1/spot-vm/auto-manager/stop - 停止自动管理器
+   POST /api/v1/spot-vm/auto-manager/simulate-termination - 模拟实例终止
+
+📝 使用示例:
+   # 健康检查
+   curl http://localhost:8080/api/v1/health
+
+   # 获取当前Spot机器状态
+   curl -H 'X-API-Key: your-super-secret-api-key-change-in-production' http://localhost:8080/api/v1/spot-vm/current/status
+
+   # 查看当前Region
+   curl -H 'X-API-Key: your-super-secret-api-key-change-in-production' http://localhost:8080/api/v1/spot-vm/current/region
+
+   # 修改目标Region
+   curl -X PUT -H 'X-API-Key: your-super-secret-api-key-change-in-production' -H 'Content-Type: application/json' -d '{"region":"ap-beijing"}' http://localhost:8080/api/v1/spot-vm/target-region
+
+   # 手动触发回收
+   curl -X POST -H 'X-API-Key: your-super-secret-api-key-change-in-production' http://localhost:8080/api/v1/spot-vm/trigger-termination
+
+🎯 功能说明:
+   - 每10秒检查一次实例是否即将被回收
+   - 检测到回收信号时自动创建新的最便宜实例
+   - 支持模拟终止进行测试
+   - 提供状态查询和控制接口
+[GIN-debug] [WARNING] You trusted all proxies, this is NOT safe. We recommend you to set a value.
+Please check https://pkg.go.dev/github.com/gin-gonic/gin#readme-don-t-trust-all-proxies for details.
+[GIN-debug] Listening and serving HTTP on :8080
+::1 - [Fri, 05 Sep 2025 17:28:46 CST] "GET /api/v1/spot-vm/current/region HTTP/1.1 200 33.263µs "curl/7.61.1" "
+::1 - [Fri, 05 Sep 2025 17:28:46 CST] "GET /api/v1/spot-vm/auto-manager/status HTTP/1.1 200 39.275µs "curl/7.61.1" "
+2025/09/05 17:28:46 🎯 目标Region已更新: sa-saopaulo -> ap-beijing
+::1 - [Fri, 05 Sep 2025 17:28:46 CST] "PUT /api/v1/spot-vm/target-region HTTP/1.1 200 114.436µs "curl/7.61.1" "
+::1 - [Fri, 05 Sep 2025 17:28:46 CST] "GET /api/v1/spot-vm/auto-manager/status HTTP/1.1 200 22.081µs "curl/7.61.1" "
+2025/09/05 17:28:46 🧪 手动触发Spot实例回收...
+::1 - [Fri, 05 Sep 2025 17:28:46 CST] "POST /api/v1/spot-vm/trigger-termination HTTP/1.1 200 37.861µs "curl/7.61.1" "
+2025/09/05 17:28:46 🔄 开始创建替换实例...
+2025/09/05 17:28:46 🎯 目标Region: ap-beijing
+2025/09/05 17:28:50 💰 选择最便宜实例: SA2.MEDIUM2 (¥0.0040/小时)
+2025/09/05 17:28:50 🔄 使用目标Region的SpotVMManager: ap-beijing
+::1 - [Fri, 05 Sep 2025 17:29:01 CST] "GET /api/v1/spot-vm/auto-manager/status HTTP/1.1 200 42.119µs "curl/7.61.1" "
+2025/09/05 17:29:01 🎯 目标Region已更新: sa-saopaulo -> sa-saopaulo
+::1 - [Fri, 05 Sep 2025 17:29:01 CST] "PUT /api/v1/spot-vm/target-region HTTP/1.1 200 97.683µs "curl/7.61.1" "
+2025/09/05 17:29:01 🧪 手动触发Spot实例回收...
+::1 - [Fri, 05 Sep 2025 17:29:01 CST] "POST /api/v1/spot-vm/trigger-termination HTTP/1.1 200 47.87µs "curl/7.61.1" "
+2025/09/05 17:29:01 ✅ 替换实例创建成功: ins-qgupajer
+2025/09/05 17:29:01 🎉 新实例已启动，当前实例即将被回收
+2025/09/05 17:29:01 🔄 开始创建替换实例...
+2025/09/05 17:29:01 🎯 目标Region: sa-saopaulo
+2025/09/05 17:29:06 💰 选择最便宜实例: S5.MEDIUM2 (¥0.0057/小时)
+2025/09/05 17:29:19 ✅ 替换实例创建成功: ins-b6iz7a2b
+2025/09/05 17:29:19 🎉 新实例已启动，当前实例即将被回收
