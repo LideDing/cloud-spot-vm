@@ -57,6 +57,9 @@ func SetupRoutes(cfg *config.Config, tccClient *tcc.TCC) *gin.Engine {
 				// 获取可用区列表
 				spotVM.GET("/zones", spotVMHandler.GetAvailableZones)
 
+				// 获取可用 Region 列表
+				spotVM.GET("/regions", spotVMHandler.GetAvailableRegions)
+
 				// 获取指定可用区的实例类型
 				spotVM.GET("/instance-types", spotVMHandler.GetInstanceTypes)
 

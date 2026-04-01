@@ -18,6 +18,21 @@ type Config struct {
 	CertificateId           string
 	TENCENTCLOUD_SECRET_ID  string
 	TENCENTCLOUD_SECRET_KEY string
+
+	// 实例创建相关配置
+	ImageId          string // 镜像ID
+	InstancePassword string // 实例登录密码
+	DiskType         string // 系统盘类型
+	DiskSize         int    // 系统盘大小（GB）
+	Bandwidth        int    // 公网带宽（Mbps）
+
+	// SSH 和迁移相关配置
+	SSHPort             int    // SSH 端口（默认 22）
+	SSHTimeout          int    // SSH 连接超时（秒，默认 10）
+	SSHWaitTimeout      int    // 等待 SSH 就绪超时（秒，默认 180）
+	MigrationMaxRetries int    // 迁移最大重试次数（默认 3）
+	RemoteBinaryPath    string // 远程二进制文件路径
+	RemoteEnvPath       string // 远程 .env 文件路径
 }
 
 // Load 加载配置
@@ -38,6 +53,21 @@ func Load() *Config {
 		CertificateId:           getEnv("CERTIFICATE_ID", ""),
 		TENCENTCLOUD_SECRET_ID:  getEnv("TENCENTCLOUD_SECRET_ID", ""),
 		TENCENTCLOUD_SECRET_KEY: getEnv("TENCENTCLOUD_SECRET_KEY", ""),
+
+		// 实例创建相关配置
+		ImageId:          getEnv("IMAGE_ID", "img-hdt9xxkt"),
+		InstancePassword: getEnv("INSTANCE_PASSWORD", ""),
+		DiskType:         getEnv("DISK_TYPE", "CLOUD_BSSD"),
+		DiskSize:         getEnvAsInt("DISK_SIZE", 20),
+		Bandwidth:        getEnvAsInt("BANDWIDTH", 10),
+
+		// SSH 和迁移相关配置
+		SSHPort:             getEnvAsInt("SSH_PORT", 22),
+		SSHTimeout:          getEnvAsInt("SSH_TIMEOUT", 10),
+		SSHWaitTimeout:      getEnvAsInt("SSH_WAIT_TIMEOUT", 180),
+		MigrationMaxRetries: getEnvAsInt("MIGRATION_MAX_RETRIES", 3),
+		RemoteBinaryPath:    getEnv("REMOTE_BINARY_PATH", "/opt/spot-manager/spot-manager"),
+		RemoteEnvPath:       getEnv("REMOTE_ENV_PATH", "/opt/spot-manager/.env"),
 	}
 
 	return config

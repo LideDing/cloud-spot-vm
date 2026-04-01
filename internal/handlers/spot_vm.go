@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"sort"
+	"strconv"
 
 	"gitee.com/dinglide/spot-vm/internal/config"
 	"gitee.com/dinglide/spot-vm/internal/models"
@@ -50,7 +52,10 @@ type GetCheapestInstancesResponse struct {
 func (h *SpotVMHandler) CreateCheapestSpotVM(c *gin.Context) {
 	var req CreateCheapestSpotVMRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":      err.Error(),
+			"error_code": "INVALID_REQUEST",
+		})
 		return
 	}
 
@@ -58,7 +63,8 @@ func (h *SpotVMHandler) CreateCheapestSpotVM(c *gin.Context) {
 	zones, err := h.tcc.SpotVMManager.GetAvailableZones()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to get available zones: " + err.Error(),
+			"error":      "Failed to get available zones: " + err.Error(),
+			"error_code": "ZONE_QUERY_FAILED",
 		})
 		return
 	}
@@ -75,7 +81,8 @@ func (h *SpotVMHandler) CreateCheapestSpotVM(c *gin.Context) {
 
 	if len(allInstances) == 0 {
 		c.JSON(http.StatusNotFound, gin.H{
-			"error": "No available spot instances found",
+			"error":      "No available spot instances found",
+			"error_code": "NO_INSTANCES_AVAILABLE",
 		})
 		return
 	}
@@ -95,7 +102,8 @@ func (h *SpotVMHandler) CreateCheapestSpotVM(c *gin.Context) {
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to create spot instance: " + err.Error(),
+			"error":      "Failed to create spot instance: " + err.Error(),
+			"error_code": "CREATE_INSTANCE_FAILED",
 		})
 		return
 	}
@@ -117,6 +125,14 @@ func (h *SpotVMHandler) CreateCheapestSpotVM(c *gin.Context) {
 
 // GetCheapestInstances 获取最便宜的实例列表
 func (h *SpotVMHandler) GetCheapestInstances(c *gin.Context) {
+	// T014: 支持 limit 查询参数，默认返回前10个
+	limit := 10
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+			limit = l
+		}
+	}
+
 	// 获取所有可用区
 	zones, err := h.tcc.SpotVMManager.GetAvailableZones()
 	if err != nil {
@@ -148,10 +164,10 @@ func (h *SpotVMHandler) GetCheapestInstances(c *gin.Context) {
 		return allInstances[i].Price.UnitPriceDiscount < allInstances[j].Price.UnitPriceDiscount
 	})
 
-	// 返回前10个最便宜的实例
+	// 返回前 limit 个最便宜的实例
 	topInstances := allInstances
-	if len(allInstances) > 10 {
-		topInstances = allInstances[:10]
+	if len(allInstances) > limit {
+		topInstances = allInstances[:limit]
 	}
 
 	response := GetCheapestInstancesResponse{
@@ -300,6 +316,18 @@ func (h *SpotVMHandler) SimulateTermination(c *gin.Context) {
 func (h *SpotVMHandler) GetCurrentInstanceStatus(c *gin.Context) {
 	status := h.tcc.AutoManager.GetCurrentInstanceStatus()
 
+	// T016: 检查是否获取到有效数据
+	instanceId, _ := status["instance_id"].(string)
+	if instanceId == "" || instanceId == "N/A" {
+		log.Println("⚠️  获取当前实例状态失败: 可能不在腾讯云实例上运行，或 metadata 服务不可达")
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "warning",
+			"message": "无法获取实例信息，可能不在腾讯云实例上运行，或 metadata 服务不可达",
+			"data":    status,
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
 		"message": "Retrieved current instance status successfully",
@@ -328,7 +356,8 @@ func (h *SpotVMHandler) SetTargetRegion(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid request format: " + err.Error(),
+			"error":      "Invalid request format: " + err.Error(),
+			"error_code": "INVALID_REQUEST",
 		})
 		return
 	}
@@ -336,20 +365,39 @@ func (h *SpotVMHandler) SetTargetRegion(c *gin.Context) {
 	// 验证Region格式
 	if req.Region == "" {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Region cannot be empty",
+			"error":      "Region cannot be empty",
+			"error_code": "EMPTY_REGION",
 		})
 		return
 	}
 
-	// 设置目标Region
-	h.tcc.AutoManager.SetTargetRegion(req.Region)
+	// T021: 记录切换前的状态
+	oldRegion := h.tcc.AutoManager.GetTargetRegion()
+
+	// SetTargetRegion 会验证 Region 有效性
+	if err := h.tcc.AutoManager.SetTargetRegion(req.Region); err != nil {
+		// 获取可用 Region 列表，帮助用户选择
+		var availableRegions []string
+		if regions, regErr := h.tcc.SpotVMManager.GetAvailableRegions(); regErr == nil {
+			for _, r := range regions {
+				availableRegions = append(availableRegions, r.Region)
+			}
+		}
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":             "无效的Region: " + req.Region,
+			"error_code":        "INVALID_REGION",
+			"available_regions": availableRegions,
+		})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
 		"message": "Target region updated successfully",
 		"data": gin.H{
 			"current_region": h.tcc.AutoManager.GetCurrentRegion(),
-			"target_region":  req.Region,
+			"old_target":     oldRegion,
+			"new_target":     req.Region,
 		},
 	})
 }
@@ -368,5 +416,26 @@ func (h *SpotVMHandler) TriggerTermination(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "success",
 		"message": "Manual termination triggered successfully",
+	})
+}
+
+// GetAvailableRegions 获取所有可用的腾讯云 Region 列表
+func (h *SpotVMHandler) GetAvailableRegions(c *gin.Context) {
+	regions, err := h.tcc.SpotVMManager.GetAvailableRegions()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":      "Failed to get available regions: " + err.Error(),
+			"error_code": "REGION_QUERY_FAILED",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":         "success",
+		"message":        "Retrieved available regions successfully",
+		"regions":        regions,
+		"total":          len(regions),
+		"current_region": h.tcc.AutoManager.GetCurrentRegion(),
+		"target_region":  h.tcc.AutoManager.GetTargetRegion(),
 	})
 }

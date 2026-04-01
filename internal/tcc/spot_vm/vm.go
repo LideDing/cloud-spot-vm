@@ -7,6 +7,16 @@ import (
 	"time"
 )
 
+// metadataClient 统一的HTTP客户端，带超时和连接池配置
+var metadataClient = &http.Client{
+	Timeout: 5 * time.Second,
+	Transport: &http.Transport{
+		MaxIdleConns:       10,
+		IdleConnTimeout:    30 * time.Second,
+		DisableCompression: true,
+	},
+}
+
 // SpotVM Spot VM
 type SpotVM struct {
 	InstanceState *instanceState
@@ -79,7 +89,7 @@ func (s *SpotVM) UpdateInstanceState() {
 
 // getMetadataInstanceId 获取实例ID
 func (s *SpotVM) getMetadataInstanceId() (string, error) {
-	response, err := http.Get(metadataUrl + "instance-id")
+	response, err := metadataClient.Get(metadataUrl + "instance-id")
 	if err != nil {
 		return "", err
 	}
@@ -92,7 +102,7 @@ func (s *SpotVM) getMetadataInstanceId() (string, error) {
 
 // getMetadataPublicIp 获取实例公网IP
 func (s *SpotVM) getMetadataPublicIp() (string, error) {
-	response, err := http.Get(metadataUrl + "public-ipv4")
+	response, err := metadataClient.Get(metadataUrl + "public-ipv4")
 	if err != nil {
 		return "", err
 	}
@@ -105,7 +115,7 @@ func (s *SpotVM) getMetadataPublicIp() (string, error) {
 
 // getMetadataPrivateIp 获取实例私有IP
 func (s *SpotVM) getMetadataPrivateIp() (string, error) {
-	response, err := http.Get(metadataUrl + "local-ipv4")
+	response, err := metadataClient.Get(metadataUrl + "local-ipv4")
 	if err != nil {
 		return "", err
 	}
@@ -118,7 +128,7 @@ func (s *SpotVM) getMetadataPrivateIp() (string, error) {
 
 // getMetadataInstanceType 获取实例类型
 func (s *SpotVM) getMetadataInstanceType() (string, error) {
-	response, err := http.Get(metadataUrl + "instance-id")
+	response, err := metadataClient.Get(metadataUrl + "instance/instance-type")
 	if err != nil {
 		return "", err
 	}
@@ -131,7 +141,7 @@ func (s *SpotVM) getMetadataInstanceType() (string, error) {
 
 // getMetadataZone 获取实例所在可用区
 func (s *SpotVM) getMetadataZone() (string, error) {
-	response, err := http.Get(metadataUrl + "placement/zone")
+	response, err := metadataClient.Get(metadataUrl + "placement/zone")
 	if err != nil {
 		return "", err
 	}
@@ -145,7 +155,7 @@ func (s *SpotVM) getMetadataZone() (string, error) {
 // getInstanceTerminated 获取实例是否被终止
 func (s *SpotVM) getInstanceTerminated() bool {
 	// 404表示不会被终止，这是正常情况
-	resp, err := http.Get(metadataUrl + "spot/termination-time")
+	resp, err := metadataClient.Get(metadataUrl + "spot/termination-time")
 	if err != nil {
 		return false
 	}

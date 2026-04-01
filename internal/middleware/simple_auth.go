@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log"
 	"net/http"
 	"strings"
 
@@ -31,6 +32,17 @@ func APIKeyAuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 
 		// 验证API key
 		if apiKey == "" || apiKey != cfg.APIKey {
+			// T018: 记录认证失败的详细日志
+			authMethod := "未提供"
+			if c.GetHeader("X-API-Key") != "" {
+				authMethod = "X-API-Key"
+			} else if c.GetHeader("Authorization") != "" {
+				authMethod = "Authorization Bearer"
+			} else if c.Query("api_key") != "" {
+				authMethod = "Query Parameter"
+			}
+			log.Printf("⚠️  API Key认证失败: ip=%s, method=%s, path=%s, auth_method=%s",
+				c.ClientIP(), c.Request.Method, c.Request.URL.Path, authMethod)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or missing API key"})
 			c.Abort()
 			return

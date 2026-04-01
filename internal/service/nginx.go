@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -269,6 +270,44 @@ func (n *NginxService) RunNginxContainer(configPath, htmlPath string) error {
 	}
 
 	log.Println("Nginx容器启动成功")
+
+	// T025: 容器启动后健康检查
+	time.Sleep(2 * time.Second) // 等待容器完全启动
+	if err := n.checkPortListening(); err != nil {
+		log.Printf("⚠️  Nginx健康检查警告: %v", err)
+	} else {
+		log.Println("✅ Nginx健康检查通过: 端口正常监听")
+	}
+
+	return nil
+}
+
+// checkPortListening 检查 Nginx 端口是否正常监听
+func (n *NginxService) checkPortListening() error {
+	// 检查容器是否在运行
+	checkCmd := exec.Command("docker", "inspect", "--format", "{{.State.Running}}", n.ContainerName)
+	output, err := checkCmd.Output()
+	if err != nil {
+		return fmt.Errorf("容器状态检查失败: %v", err)
+	}
+	if strings.TrimSpace(string(output)) != "true" {
+		return fmt.Errorf("容器未在运行状态")
+	}
+
+	// 检查端口映射
+	portCmd := exec.Command("docker", "port", n.ContainerName)
+	portOutput, err := portCmd.Output()
+	if err != nil {
+		return fmt.Errorf("端口映射检查失败: %v", err)
+	}
+	portStr := string(portOutput)
+	if !strings.Contains(portStr, fmt.Sprintf("%d", n.Port80)) {
+		return fmt.Errorf("80端口未正常映射")
+	}
+	if n.SSLEnabled && !strings.Contains(portStr, fmt.Sprintf("%d", n.Port443)) {
+		return fmt.Errorf("443端口未正常映射")
+	}
+
 	return nil
 }
 

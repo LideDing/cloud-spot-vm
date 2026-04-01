@@ -2,12 +2,13 @@ package middleware
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
-	"gitee.com/dinglide/spot-vm/internal/config"
-	// "gitee.com/dinglide/spot-vm/internal/database"
+	"gitee.com/dinglide/spot-vm/internal/config" // "gitee.com/dinglide/spot-vm/internal/database"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -134,11 +135,55 @@ func CORSMiddleware() gin.HandlerFunc {
 	}
 }
 
-// RateLimitMiddleware 简单的速率限制中间件
+// RateLimitMiddleware 基于令牌桶算法的速率限制中间件
 func RateLimitMiddleware() gin.HandlerFunc {
-	// 这里可以实现更复杂的速率限制逻辑
-	// 暂时返回一个简单的中间件
+	// 简化版令牌桶：每个IP每秒最多10个请求
+	type visitor struct {
+		tokens    int
+		lastReset time.Time
+	}
+	var (
+		mu       sync.Mutex
+		visitors = make(map[string]*visitor)
+	)
+
+	const (
+		maxTokens  = 10
+		refillRate = 10 // 每秒补充的令牌数
+	)
+
 	return func(c *gin.Context) {
+		ip := c.ClientIP()
+
+		mu.Lock()
+		v, exists := visitors[ip]
+		if !exists {
+			v = &visitor{tokens: maxTokens, lastReset: time.Now()}
+			visitors[ip] = v
+		}
+
+		// 补充令牌
+		now := time.Now()
+		elapsed := now.Sub(v.lastReset).Seconds()
+		v.tokens += int(elapsed * float64(refillRate))
+		if v.tokens > maxTokens {
+			v.tokens = maxTokens
+		}
+		v.lastReset = now
+
+		if v.tokens <= 0 {
+			mu.Unlock()
+			c.JSON(http.StatusTooManyRequests, gin.H{
+				"error":      "Rate limit exceeded. Please try again later.",
+				"error_code": "RATE_LIMIT_EXCEEDED",
+			})
+			c.Abort()
+			return
+		}
+
+		v.tokens--
+		mu.Unlock()
+
 		c.Next()
 	}
 }
@@ -148,40 +193,26 @@ func SplitToken(authHeader string) []string {
 	return strings.Split(authHeader, " ")
 }
 
-// AuditMiddleware 审计日志中间件
+// AuditMiddleware 审计日志中间件，记录所有写操作
 func AuditMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 记录请求开始时间（用于未来扩展）
-		_ = time.Now()
+		// 记录请求开始时间
+		startTime := time.Now()
 
 		// 处理请求
 		c.Next()
 
-		// 记录审计日志（简化版本，不依赖数据库）
-		// userID, _ := c.Get("user_id")
-		// var userIDPtr *uuid.UUID
-		// if userID != nil {
-		// 	if id, ok := userID.(uuid.UUID); ok {
-		// 		userIDPtr = &id
-		// 	}
-		// }
+		// 仅记录写操作（POST/PUT/DELETE）的审计日志
+		method := c.Request.Method
+		if method == "POST" || method == "PUT" || method == "DELETE" {
+			latency := time.Since(startTime)
+			statusCode := c.Writer.Status()
+			clientIP := c.ClientIP()
+			path := c.Request.URL.Path
+			userAgent := c.Request.UserAgent()
 
-		// auditLog := models.AuditLog{
-		// 	UserID:    userIDPtr,
-		// 	Action:    c.Request.Method,
-		// 	Resource:  c.Request.URL.Path,
-		// 	IPAddress: c.ClientIP(),
-		// 	UserAgent: c.Request.UserAgent(),
-		// }
-
-		// 异步记录审计日志（仅在数据库可用时）
-		// go func() {
-		// 	db := database.GetDB()
-		// 	if db != nil {
-		// 		if err := db.Create(&auditLog).Error; err != nil {
-		// 			log.Printf("Failed to create audit log: %v", err)
-		// 		}
-		// 	}
-		// }()
+			log.Printf("📝 [AUDIT] %s %s | status=%d | ip=%s | latency=%v | ua=%s",
+				method, path, statusCode, clientIP, latency, userAgent)
+		}
 	}
 }

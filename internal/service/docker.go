@@ -77,7 +77,17 @@ func (n *NginxService) InstallDocker() error {
 		}
 	}
 
-	log.Println("Docker安装完成")
+	// T024: 安装结果验证
+	if !n.isDockerInstalled() {
+		return fmt.Errorf("Docker安装完成但验证失败: docker --version 执行失败，请检查安装日志")
+	}
+
+	// 获取并记录Docker版本
+	versionCmd := exec.Command("docker", "--version")
+	if output, err := versionCmd.Output(); err == nil {
+		log.Printf("Docker安装完成: %s", strings.TrimSpace(string(output)))
+	}
+
 	return nil
 }
 

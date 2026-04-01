@@ -19,7 +19,7 @@ type SpotService struct {
 }
 
 func NewSpotService(cfg *config.Config) (*SpotService, error) {
-	tccClient, err := tcc.NewTCC(cfg.TENCENTCLOUD_SECRET_ID, cfg.TENCENTCLOUD_SECRET_KEY, cfg.Region)
+	tccClient, err := tcc.NewTCC(cfg.Region, cfg.CertificateId, cfg.Domain, cfg)
 	if err != nil {
 		return nil, err
 	}

@@ -1,3 +1,6 @@
+// Deprecated: 此文件为早期入口，已弃用。
+// 请使用 cmd/spot-manager/main.go 作为主入口。
+// 该入口使用旧版 SpotService，不支持 SimpleAutoManager 和完整的 REST API。
 package main
 
 import (
@@ -27,7 +30,7 @@ func main() {
 	region := "ap-hongkong" // 可以根据需要修改
 	domain := "oitcep.com"
 	certificateId := "Qi1S1ItN"
-	tccClient, err := tcc.NewTCC(region, certificateId, domain)
+	tccClient, err := tcc.NewTCC(region, certificateId, domain, cfg)
 	if err != nil {
 		fmt.Printf("创建TCC客户端失败: %v\n", err)
 		return
